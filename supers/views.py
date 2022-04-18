@@ -2,6 +2,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+from super_types.models import Super_Types
 from .models import Supers
 from .serializers import SupersSerializer
 
@@ -9,9 +10,29 @@ from .serializers import SupersSerializer
 @api_view(['GET', 'POST'])
 def supers_list(request):
     if request.method == 'GET':
+        type_param = request.query_params.get('type')
         supers = Supers.objects.all()
-        serializer = SupersSerializer(supers, many=True)
-        return Response(serializer.data)
+        super_types = Super_Types.objects.all()
+        custom_response = {}
+
+        if type_param:
+            supers = supers.filter(super_type__type=type_param)
+            serializer = SupersSerializer(supers, many=True)
+            return Response(serializer.data)
+        
+        for super_type in super_types:
+            heroes = Supers.objects.filter(super_type_id=1)
+            heroes_serializer = SupersSerializer(heroes, many=True)
+            villians = Supers.objects.filter(super_type_id=2)
+            villians_serializer = SupersSerializer(villians, many=True)
+            custom_response = {
+                'heroes': heroes_serializer.data,
+                'villians': villians_serializer.data
+            }
+        return Response(custom_response)
+
+
+
     elif request.method == 'POST':
         serializer = SupersSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -33,4 +54,3 @@ def supers_details(request, pk):
     elif request.method == 'DELETE':
         supers.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-        
